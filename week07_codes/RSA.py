@@ -32,6 +32,24 @@ def generate_keys(bits=1024):
     print("\nCheck phi(n), e.d=1 mod phi(n)?")
     return e, n, d
 
+def input_aes_key_and_encrypt(e, n, output_format="base64"):
+    """Cho người dùng nhập AES key (hex hoặc text), rồi mã hóa bằng RSA"""
+    key_type = input("Nhập kiểu AES key (1: text thường, 2: hex): ").strip()
+    
+    if key_type == "1":
+        plain = input("Nhập AES key (chuỗi text): ").strip()
+        aes_key_bytes = plain.encode()
+    elif key_type == "2":
+        hex_str = input("Nhập AES key (hex): ").strip()
+        aes_key_bytes = bytes.fromhex(hex_str)
+    else:
+        print("Không hợp lệ.")
+        return
+
+    # Mã hóa AES key
+    encrypted = encrypt_bytes(aes_key_bytes, e, n, output_format)
+    print(f"\n🔐 AES key đã mã hóa ({output_format}):\n{encrypted}")
+    
 def encrypt(plain_text, e, n, output_format="base64"):
     """Encrypts message and returns Base64 or Hex-encoded cipher."""
     numeric_text = [ord(char) for char in plain_text]
@@ -46,6 +64,16 @@ def encrypt(plain_text, e, n, output_format="base64"):
     
     print(f"\nCipher ({output_format}): {encoded_cipher}")
     return encoded_cipher
+
+def encrypt_bytes(data_bytes, e, n, output_format="base64"):
+    """Mã hóa bytes bằng RSA (e, n) và trả về dưới dạng base64 hoặc hex"""
+    num = int.from_bytes(data_bytes, 'big')
+    cipher_num = pow(num, e, n)
+    cipher_bytes = cipher_num.to_bytes((n.bit_length() + 7) // 8, 'big')
+    if output_format == "base64":
+        return base64.b64encode(cipher_bytes).decode()
+    else:
+        return cipher_bytes.hex()
 
 def decrypt(encoded_cipher, d, n, input_format="base64"):
     """Decrypts Base64 or Hex-encoded cipher and returns plaintext."""
@@ -70,7 +98,8 @@ def main():
         print("1. Generate Keys")
         print("2. Encrypt a Message")
         print("3. Decrypt a Cipher")
-        print("4. Exit")
+        print("4. Input AES & RSA")
+        print("5. Exit")
 
         choice = input("Select an option: ").strip()
 
@@ -92,6 +121,12 @@ def main():
             decrypt(encoded_cipher, d, n, input_format)
 
         elif choice == "4":
+            n = int(input("Nhập modulus n: ").strip())
+            e = int(input("Nhập public exponent e: ").strip())
+            output_format = input("Chọn định dạng output (base64/hex, mặc định=base64): ").strip().lower() or "base64"
+            input_aes_key_and_encrypt(e, n, output_format)
+    
+        elif choice == "5":
             print("Exiting...")
             break
 
