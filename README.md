@@ -1,123 +1,143 @@
-# Hệ thống Chấm điểm Tín dụng Bảo toàn Quyền riêng tư sử dụng Mã hóa Đồng cấu (Homomorphic Encryption)
+# Đề xuất Đồ án: Hệ thống Chấm điểm Tín dụng Bảo toàn Quyền riêng tư sử dụng Mã hóa Đồng cấu và Dịch vụ HE Chuyên biệt
 
-## Bối cảnh 
+## 1️⃣ Bối cảnh (Context)
 
-Trong lĩnh vực tài chính, các tổ chức tín dụng thường xuyên cần xử lý và tính toán điểm tín dụng của khách hàng. Quá trình này dựa trên các dữ liệu cá nhân và tài chính nhạy cảm như thu nhập, chi tiêu, lịch sử giao dịch, tình trạng nợ, v.v. Hiện nay, để nâng cao chất lượng mô hình và hiệu quả hoạt động, Ngân hàng có xu hướng hợp tác với các Bên thứ ba (ví dụ: các công ty Fintech chuyên về phân tích dữ liệu - sau đây gọi là "Đối tác Fintech") để thực hiện việc tính toán này.
+Trong lĩnh vực tài chính, các tổ chức tín dụng (Ngân hàng) phải xử lý một lượng lớn dữ liệu cá nhân và tài chính nhạy cảm của khách hàng (thu nhập, lịch sử giao dịch, nợ, v.v.) để tính toán điểm tín dụng. Để tối ưu hóa độ chính xác của mô hình chấm điểm và tận dụng chuyên môn bên ngoài, Ngân hàng thường hợp tác với các Bên thứ ba (Đối tác Fintech) chuyên về phân tích dữ liệu.
 
-Tuy nhiên, việc gửi dữ liệu thô của khách hàng đến Đối tác Fintech tiềm ẩn nguy cơ rò rỉ dữ liệu cá nhân nghiêm trọng. Điều này không chỉ ảnh hưởng đến quyền riêng tư của khách hàng mà còn vi phạm các quy định bảo mật dữ liệu ngày càng khắt khe (ví dụ: GDPR, Nghị định 13/2023/NĐ-CP về Bảo vệ dữ liệu cá nhân tại Việt Nam). Do đó, việc phát triển một giải pháp cho phép tính toán trên dữ liệu mà vẫn đảm bảo dữ liệu được mã hóa đầu-cuối (end-to-end privacy) đang trở thành một nhu cầu cấp thiết.
+Tuy nhiên, việc chia sẻ dữ liệu thô của khách hàng cho Đối tác Fintech gây ra những rủi ro nghiêm trọng về bảo mật và quyền riêng tư, có thể vi phạm các quy định như GDPR hoặc Nghị định 13/2023/NĐ-CP của Việt Nam. Do đó, cần một giải pháp cho phép Đối tác Fintech thực hiện tính toán trên dữ liệu khách hàng mà không cần truy cập vào dữ liệu gốc, đảm bảo an toàn thông tin đầu-cuối. Hệ thống này cũng yêu cầu một dịch vụ chuyên biệt cung cấp các chức năng mã hóa và giải mã đồng cấu, có cơ chế xác thực mạnh mẽ.
 
-## Phương pháp truyền thống và Hạn chế 
+## 2️⃣ Phương pháp truyền thống và Hạn chế (Traditional Methods and Limitations)
 
-Các phương pháp bảo vệ dữ liệu hiện tại mà các tổ chức tài chính thường áp dụng bao gồm:
+Các phương pháp hiện tại thường bao gồm mã hóa dữ liệu khi lưu trữ (at-rest) và truyền tải (in-transit) bằng AES hoặc RSA. Tuy nhiên, những hạn chế chính bao gồm:
 
-*   **Mã hóa khi lưu trữ và truyền tải (Encryption at Rest & In Transit):** Sử dụng các thuật toán mã hóa đối xứng (AES) hoặc bất đối xứng (RSA) để bảo vệ dữ liệu khi được lưu trữ trong cơ sở dữ liệu hoặc khi truyền đi giữa các hệ thống.
-    *   **Hạn chế:** Dữ liệu *bắt buộc phải được giải mã* tại máy chủ của Đối tác Fintech trước khi thực hiện bất kỳ phép tính nào (ví dụ: xây dựng mô hình, tính điểm tín dụng). Điều này tạo ra một "điểm yếu" nơi dữ liệu nhạy cảm bị phơi bày, làm mất đi tính riêng tư trong quá trình xử lý.
-*   **Giải pháp che mờ/giải danh (Data Masking/Anonymization):**
-    *   **Hạn chế:** Có thể làm giảm độ chính xác của mô hình tính điểm tín dụng. Dữ liệu giải danh vẫn có nguy cơ bị tái định danh (re-identification attack) khi kết hợp với các nguồn dữ liệu khác.
+*   **Dữ liệu phải được giải mã để xử lý:** Tại máy chủ của Đối tác Fintech, dữ liệu bắt buộc phải được giải mã về dạng rõ (plaintext) trước khi có thể thực hiện bất kỳ phép tính nào. Điều này tạo ra một cửa sổ rủi ro nơi dữ liệu nhạy cảm bị phơi bày.
+*   **Không hỗ trợ tính toán trên dữ liệu mã hóa:** Các logic nghiệp vụ phức tạp, đặc biệt là các mô hình tính điểm, không thể được thực hiện trực tiếp trên dữ liệu đã mã hóa bằng các phương pháp truyền thống.
 
-Đặc biệt, nếu logic tính điểm tín dụng bao gồm các điều kiện phức tạp (ví dụ: "NẾU thu nhập > X VÀ dư nợ < Y THÌ điểm tín dụng += Z"), các phương pháp truyền thống không thể thực hiện các phép toán này trực tiếp trên dữ liệu đã mã hóa. Chúng đòi hỏi dữ liệu phải ở dạng rõ (plaintext), điều này đi ngược lại yêu cầu bảo mật dữ liệu đầu-cuối trong quá trình tính toán.
+Những hạn chế này không đáp ứng được yêu cầu bảo mật dữ liệu đầu-cuối trong toàn bộ quy trình tính toán điểm tín dụng khi có sự tham gia của bên thứ ba.
 
-## Đề xuất giải pháp mới: Hệ thống Chấm điểm Tín dụng An toàn sử dụng Mã hóa Đồng cấu Hoàn toàn (Fully Homomorphic Encryption - FHE)
+## 3️⃣ Đề xuất giải pháp mới: Hệ thống Chấm điểm Tín dụng An toàn với Dịch vụ Mã hóa Đồng cấu (HE Service)
 
-Chúng tôi đề xuất xây dựng một "Hệ thống Chấm điểm Tín dụng Bảo toàn Quyền riêng tư" sử dụng kỹ thuật **Mã hóa Đồng cấu Hoàn toàn (Fully Homomorphic Encryption - FHE)**. FHE cho phép thực hiện một loạt các phép tính toán (bao gồm cộng, nhân, và các hàm phức tạp hơn có thể được xây dựng từ đó) trực tiếp trên dữ liệu đã được mã hóa (ciphertext) mà không cần giải mã chúng trước.
+Chúng tôi đề xuất xây dựng một "Hệ thống Chấm điểm Tín dụng Bảo toàn Quyền riêng tư" sử dụng kỹ thuật **Mã hóa Đồng cấu Hoàn toàn (Fully Homomorphic Encryption - FHE)**, được hỗ trợ bởi một **Dịch vụ HE (HE Service)** chuyên biệt.
 
-**Luồng hoạt động chính:**
-1.  **Tại Ngân hàng:** Dữ liệu khách hàng được mã hóa bằng Khóa công khai (Public Key) của FHE.
-2.  **Chuyển giao an toàn:** Dữ liệu đã mã hóa (ciphertext) được gửi đến Đối tác Fintech.
-3.  **Tại Đối tác Fintech:** Thực hiện các thuật toán tính điểm tín dụng trực tiếp trên ciphertext, sử dụng Khóa công khai.
-4.  **Trả kết quả:** Kết quả điểm tín dụng (vẫn ở dạng ciphertext) được trả về cho Ngân hàng.
-5.  **Tại Ngân hàng:** Ngân hàng sử dụng Khóa bí mật (Secret Key) của mình để giải mã và thu được điểm tín dụng ở dạng rõ.
+**Luồng hoạt động chính (theo sơ đồ):**
+1.  **Khởi tạo khóa (Thông qua HE Service):** Bank System yêu cầu HE Service tạo cặp khóa FHE (Public Key - PK, Secret Key - SK). Bank System lưu giữ SK cẩn mật, và PK được sử dụng cho việc mã hóa và tính toán.
+2.  **Mã hóa Dữ liệu (Bank System & HE Service):**
+    *   Bank System lấy dữ liệu khách hàng từ **Transaction Database (SQL Server)**.
+    *   Bank System gọi **Encrypt API** của HE Service, gửi kèm dữ liệu cần mã hóa, HE Public Key và **Token xác thực (JWT) + Public Key định danh của Bank System**.
+    *   HE Service xác thực yêu cầu, sau đó mã hóa dữ liệu bằng HE Public Key và trả về ciphertext cho Bank System.
+3.  **Gửi Dữ liệu Mã hóa (Bank System đến Fintech Partner):** Bank System gửi ciphertext và HE Public Key cho Đối tác Fintech.
+4.  **Tính toán trên Ciphertext (Fintech Partner):** Đối tác Fintech sử dụng HE Public Key nhận được để thực hiện các thuật toán tính điểm tín dụng trực tiếp trên ciphertext.
+5.  **Trả Kết quả Mã hóa (Fintech Partner đến Bank System):** Đối tác Fintech trả kết quả điểm tín dụng (vẫn ở dạng ciphertext) về cho Bank System.
+6.  **Giải mã Kết quả (Bank System & HE Service):**
+    *   Bank System nhận Encrypted Result.
+    *   Bank System gọi **Decrypt API** của HE Service, gửi kèm ciphertext cần giải mã, **HE Secret Key** (do Bank System quản lý) và **Token xác thực (JWT) + Public Key định danh của Bank System**.
+    *   HE Service xác thực yêu cầu, sau đó giải mã ciphertext bằng HE Secret Key và trả về kết quả điểm tín dụng dạng rõ cho Bank System.
+7.  **Hiển thị Kết quả (Bank System):** Bank System hiển thị điểm tín dụng trên **Credit Score Dashboard** hoặc lưu vào cơ sở dữ liệu.
 
-### 3.1 Kiến trúc hệ thống (System Architecture)
-
-Hệ thống dự kiến bao gồm các thành phần chính:
+### 3.1 Kiến trúc hệ thống (System Architecture - Dựa trên sơ đồ)
 
 *   **Bank System (Hệ thống Ngân hàng):**
-    *   Chịu trách nhiệm mã hóa dữ liệu thô của khách hàng bằng Public Key (PK) của FHE.
-    *   Gửi ciphertext và PK (nếu Đối tác Fintech chưa có) sang Đối tác Fintech.
-    *   Lưu giữ an toàn Secret Key (SK).
-    *   Nhận kết quả điểm tín dụng đã mã hóa từ Đối tác Fintech và giải mã bằng SK.
+    *   Tương tác với cơ sở dữ liệu **SQL Server** để lấy dữ liệu khách hàng.
+    *   Quản lý và sử dụng **HE Secret Key**.
+    *   Gọi các API của **HE Service** (Encrypt, Decrypt) để thực hiện các thao tác mã hóa.
+    *   Xác thực với HE Service bằng **JWT và Public Key định danh**.
+    *   Giao tiếp với **Fintech Partner** để gửi dữ liệu mã hóa và nhận kết quả mã hóa.
+    *   Hiển thị kết quả cuối cùng.
 *   **Fintech Partner System (Hệ thống Đối tác Fintech - Mô phỏng):**
-    *   Nhận ciphertext và PK từ Bank System.
-    *   Thực hiện các logic tính toán điểm tín dụng (ví dụ: theo một mô hình được định sẵn) trực tiếp trên ciphertext.
-    *   Trả kết quả điểm tín dụng (vẫn ở dạng ciphertext) về cho Bank System.
-    *   **Quan trọng:** Không bao giờ có quyền truy cập vào SK hoặc dữ liệu gốc của khách hàng.
-*   **HE Service (Dịch vụ Mã hóa Đồng cấu - Tích hợp vào Bank System trong PoC):**
-    *   Chịu trách nhiệm tạo và quản lý các tham số hệ thống FHE.
-    *   Tạo cặp khóa Public Key (PK) và Secret Key (SK). (SK sẽ do Bank System trực tiếp quản lý và lưu giữ.)
-    *   Cung cấp các API/chức năng hỗ trợ cho Bank System trong việc mã hóa, giải mã.
+    *   Nhận **HE Public Key** và ciphertext từ Bank System.
+    *   Thực hiện tính toán điểm tín dụng trên ciphertext.
+    *   Trả kết quả (ciphertext) về cho Bank System.
+    *   **Không bao giờ có quyền truy cập vào HE Secret Key hoặc dữ liệu gốc của khách hàng.**
+*   **HE Service (Dịch vụ Mã hóa Đồng cấu):**
+    *   Cung cấp các API chuyên biệt:
+        *   `Generate Key API`: Tạo cặp khóa HE (PK, SK) theo yêu cầu.
+        *   `Encrypt API`: Nhận dữ liệu, HE Public Key, mã hóa và trả về ciphertext.
+        *   `Decrypt API`: Nhận ciphertext, HE Secret Key, giải mã và trả về plaintext.
+    *   **Xác thực và Ủy quyền:** Yêu cầu Bank System cung cấp Token (JWT) và Public Key định danh hợp lệ trước khi cho phép sử dụng các API của mình.
+    *   **Không lưu trữ HE Secret Key của Bank System** (Bank System gửi SK kèm theo mỗi yêu cầu giải mã).
 
-### 3.2 Kiểm soát truy cập và Bảo mật 
+### 3.2 Kiểm soát truy cập và Bảo mật (Access Control and Security)
 
-*   **Phân tách vai trò rõ ràng:**
-    *   Bank System sở hữu và kiểm soát hoàn toàn Secret Key, là bên duy nhất có khả năng giải mã dữ liệu.
-    *   Fintech Partner System chỉ có thể thao tác trên ciphertext bằng Public Key và không thể suy ra dữ liệu gốc.
-*   **Mã hóa đầu-cuối cho quá trình tính toán:** Dữ liệu nhạy cảm của khách hàng được bảo vệ từ lúc rời khỏi Bank System, trong suốt quá trình tính toán tại Fintech Partner, cho đến khi kết quả được giải mã tại Bank System.
-*   **Sử dụng lược đồ FHE:** Đồ án sẽ tập trung vào việc sử dụng một thư viện **TenSEAL** (sử dụng lược đồ CKKS cho dữ liệu số thực gần đúng), để hỗ trợ các phép cộng và nhân trên dữ liệu mã hóa, nền tảng cho các mô hình tính điểm phức tạp hơn.
+*   **Bank System:** Giữ toàn quyền kiểm soát HE Secret Key. Chỉ Bank System mới có thể khởi tạo yêu cầu giải mã dữ liệu.
+*   **Fintech Partner:** Chỉ được cấp HE Public Key, chỉ có thể thực hiện tính toán trên ciphertext.
+*   **HE Service:** Đóng vai trò là một "cỗ máy" thực thi mã hóa/giải mã. Việc sử dụng dịch vụ này được bảo vệ bởi cơ chế xác thực JWT và Public Key định danh, đảm bảo chỉ Bank System được ủy quyền mới có thể yêu cầu các thao tác liên quan đến khóa của mình. HE Secret Key được truyền từ Bank System đến HE Service cho mỗi thao tác giải mã và không được lưu trữ bởi HE Service.
+*   **Mã hóa Đồng cấu Hoàn toàn (FHE) với TenSEAL:** Sử dụng lược đồ CKKS của TenSEAL để làm việc với dữ liệu số thực, cho phép các phép cộng và nhân cần thiết cho mô hình tính điểm.
 
-## Triển khai Hệ thống Thực tế 
+## 4️⃣ Triển khai Hệ thống Thực tế (Proof of Concept - PoC)
 
 Đồ án sẽ tập trung vào việc xây dựng một Proof-of-Concept (PoC) với các thành phần sau:
 
 ➡️ **Bank System (Triển khai Backend)**
 *   **Framework:** FastAPI (Python).
-*   **Mã hóa/Giải mã dữ liệu:** Sử dụng thư viện **TenSEAL** với lược đồ CKKS để mã hóa/giải mã dữ liệu số thực (ví dụ: thu nhập, tỷ lệ nợ).
-*   **Chức năng API:**
-    *   Endpoint để nhận dữ liệu khách hàng (mô phỏng).
-    *   Logic mã hóa dữ liệu bằng TenSEAL.
-    *   Logic gọi API của Fintech Partner để gửi dữ liệu mã hóa.
-    *   Endpoint để nhận kết quả mã hóa từ Fintech Partner.
-    *   Logic giải mã kết quả bằng TenSEAL.
+*   **Database:** Kết nối và truy vấn **SQL Server** (sử dụng thư viện như `pyodbc` hoặc `SQLAlchemy`).
+*   **Tương tác HE:** Gọi các API của HE Service để mã hóa và giải mã dữ liệu. Quản lý việc gửi HE Secret Key an toàn đến HE Service khi giải mã.
+*   **Xác thực:** Tạo và gửi JWT + Public Key định danh đến HE Service.
+*   **Thư viện HE (để quản lý khóa và hiểu cấu trúc dữ liệu):** **TenSEAL**.
 
 ➡️ **Fintech Partner System (Mô phỏng Backend)**
 *   **Framework:** FastAPI (Python).
+*   **Tính toán HE:** Sử dụng **TenSEAL** và HE Public Key nhận được để thực hiện các phép toán trên ciphertext.
+*   **Chức năng API:** Endpoint nhận dữ liệu mã hóa, thực hiện tính toán, endpoint trả kết quả mã hóa.
+
+➡️ **HE Service (Triển khai Backend)**
+*   **Framework:** FastAPI (Python).
 *   **Chức năng API:**
-    *   Endpoint để nhận ciphertext (định dạng của TenSEAL) và Public Key từ Bank System.
-    *   Logic thực hiện tính toán điểm tín dụng (ví dụ: một công thức tuyến tính `Score = w1*data1 + w2*data2 + ...`) trực tiếp trên ciphertext bằng các phép toán được TenSEAL hỗ trợ.
-    *   Endpoint để trả kết quả (ciphertext) về Bank System.
+    *   `/generate-keys`: Tạo cặp khóa TenSEAL (context, public key, secret key).
+    *   `/encrypt`: Nhận data, TenSEAL public key, mã hóa bằng TenSEAL. Yêu cầu JWT + Public Key định danh để xác thực.
+    *   `/decrypt`: Nhận ciphertext, TenSEAL secret key, giải mã bằng TenSEAL. Yêu cầu JWT + Public Key định danh để xác thực.
+*   **Thư viện HE:** **TenSEAL** để thực hiện các thao tác cốt lõi.
+*   **Xác thực:** Triển khai logic xác thực JWT và Public Key định danh.
 
-➡️ **HE Service (Logic tích hợp)**
-*   **Chức năng:** Sinh khóa (Context, Public Key, Secret Key) và các tham số hệ thống FHE cần thiết cho TenSEAL.
-*   **Triển khai:** Sẽ được tích hợp vào Bank System trong giai đoạn PoC này.
+## 5️⃣ Công nghệ sử dụng (Proposed Technology Stack)
 
-## Công nghệ sử dụng (Proposed Technology Stack)
+| Thành phần             | Công nghệ chính                                      | Mục đích                                                         |
+| :--------------------- | :---------------------------------------------------- | :--------------------------------------------------------------- |
+| **Bank System**        | Python, FastAPI                                     | Xây dựng API backend, logic nghiệp vụ, gọi HE Service           |
+|                        | **SQL Server** (DB)                                   | Lưu trữ dữ liệu giao dịch của khách hàng                         |
+|                        | `pyodbc` / `SQLAlchemy`                              | Kết nối và tương tác với SQL Server từ Python                     |
+|                        | **TenSEAL**                                           | Để Bank System hiểu và quản lý các đối tượng khóa/ciphertext    |
+|                        | Thư viện JWT (ví dụ: `PyJWT`)                         | Tạo và quản lý JWT cho việc xác thực với HE Service             |
+| **Fintech Partner**    | Python, FastAPI                                     | Mô phỏng API backend, logic tính toán HE                       |
+|                        | **TenSEAL**                                           | Thực hiện tính toán trên ciphertext bằng HE Public Key           |
+| **HE Service**         | Python, FastAPI                                     | Cung cấp các API mã hóa, giải mã, sinh khóa chuyên biệt          |
+|                        | **TenSEAL**                                           | Thư viện cốt lõi để thực hiện các phép toán HE                   |
+|                        | Thư viện JWT (ví dụ: `PyJWT`)                         | Xác thực token từ Bank System                                  |
 
-| Thành phần             | Công nghệ chính                                       | Mục đích                                     |
-| :--------------------- | :---------------------------------------------------- | :------------------------------------------- |
-| **Bank System**        | Python, FastAPI                                       | Xây dựng API backend, xử lý logic nghiệp vụ  |
-|                        | **TenSEAL (FHE - CKKS)**                              | Mã hóa/giải mã, tính toán FHE trên số thực   |
-| **Fintech Partner**    | Python, FastAPI                                       | Mô phỏng API backend, xử lý logic tính toán  |
-|                        | **TenSEAL (FHE - CKKS)**                              | Thực hiện tính toán trên ciphertext          |
-| **Database**           | SQL Server                                            | Lưu trữ dữ liệu mẫu cho PoC (nhanh chóng)    |
-
-## Mục tiêu Đồ án & Các bước thực hiện dự kiến 
+## 6️⃣ Mục tiêu Đồ án & Các bước thực hiện dự kiến (Project Goals & Initial Milestones)
 
 *   **Mục tiêu chính:**
-    1.  Nghiên cứu sâu về các khái niệm và lược đồ Mã hóa Đồng cấu Hoàn toàn (FHE), cụ thể là CKKS qua thư viện TenSEAL.
-    2.  Thiết kế và triển khai thành công một hệ thống PoC cho việc chấm điểm tín dụng bảo toàn quyền riêng tư sử dụng FHE.
-    3.  Chứng minh khả năng thực hiện các phép toán cộng và nhân trên dữ liệu số thực đã mã hóa, nền tảng cho mô hình tính điểm.
-    4.  Đánh giá sơ bộ về hiệu năng (thời gian mã hóa, giải mã, tính toán) và kích thước dữ liệu mã hóa của giải pháp sử dụng TenSEAL.
+    1.  Nghiên cứu sâu về FHE, cụ thể là lược đồ CKKS của TenSEAL.
+    2.  Thiết kế và triển khai thành công PoC với kiến trúc 3 thành phần (Bank System, Fintech Partner, HE Service) như sơ đồ.
+    3.  Triển khai cơ chế xác thực JWT + Public Key định danh cho HE Service.
+    4.  Chứng minh khả năng mã hóa dữ liệu từ SQL Server, gửi đi tính toán, nhận lại và giải mã thành công.
+    5.  Đánh giá sơ bộ về hiệu năng của hệ thống.
 *   **Các bước thực hiện dự kiến:**
-    1.  Thiết lập môi trường, cài đặt thư viện TenSEAL.
-    2.  Xây dựng module sinh khóa (TenSEAL context, public/secret keys) và quản lý khóa cơ bản.
-    3.  Triển khai API cho Bank System: mã hóa dữ liệu, gửi yêu cầu.
-    4.  Triển khai API cho Fintech Partner: nhận dữ liệu mã hóa, thực hiện tính toán (cộng, nhân) trên ciphertext.
-    5.  Hoàn thiện luồng: Bank System nhận kết quả mã hóa và giải mã.
-    6.  Kiểm thử toàn bộ hệ thống với dữ liệu số thực mẫu (ví dụ: thu nhập, các chỉ số tài chính).
-    7.  Tài liệu hóa các tham số, quá trình scaling (nếu cần cho CKKS) và kết quả.
+    1.  Thiết lập môi trường, cài đặt các thư viện cần thiết (FastAPI, TenSEAL, pyodbc/SQLAlchemy, PyJWT).
+    2.  **HE Service:**
+        *   Triển khai API `/generate-keys`.
+        *   Triển khai API `/encrypt` và `/decrypt` sử dụng TenSEAL.
+        *   Tích hợp cơ chế xác thực JWT + Public Key định danh cho các API của HE Service.
+    3.  **Bank System:**
+        *   Triển khai logic gọi API `/generate-keys` của HE Service để lấy khóa, lưu SK an toàn.
+        *   Kết nối SQL Server, lấy dữ liệu.
+        *   Triển khai logic tạo JWT, gọi API `/encrypt` của HE Service.
+        *   Triển khai logic gọi API `/decrypt` của HE Service, truyền SK một cách an toàn.
+    4.  **Fintech Partner:** Triển khai API nhận ciphertext, thực hiện tính toán mẫu bằng TenSEAL, trả kết quả.
+    5.  Kiểm thử toàn bộ luồng hoạt động của hệ thống.
 
-## Khó khăn và Thách thức
+## 7️⃣ Khó khăn và Thách thức (Potential Difficulties and Challenges)
 
-*   **Độ phức tạp của FHE:** Hiểu và áp dụng đúng các khái niệm, tham số của FHE (đặc biệt là CKKS với việc quản lý "noise" và precision) đòi hỏi nỗ lực nghiên cứu.
-*   **Hạn chế về các phép toán logic phức tạp:** Mặc dù FHE mạnh mẽ, việc triển khai các phép toán logic như so sánh trực tiếp hoặc if-else trên CKKS có thể không tầm thường và yêu cầu các kỹ thuật xấp xỉ hoặc các hàm đa thức. Đồ án này sẽ tập trung vào các phép toán số học cơ bản.
-*   **Hiệu năng:** Các phép toán trên dữ liệu mã hóa FHE thường chậm và tạo ra bản mã lớn. Cần đánh giá và ý thức về vấn đề này, đặc biệt với các tính toán lặp lại hoặc sâu.
-*   **Quản lý khóa (Key Management):** Mặc dù PoC sẽ đơn giản hóa, việc quản lý khóa an toàn trong thực tế là một thách thức lớn.
-*   **Độ chính xác (Precision):** Lược đồ CKKS là mã hóa gần đúng cho số thực. Cần quản lý cẩn thận các tham số (scale, polynomial modulus degree) để cân bằng giữa độ chính xác và hiệu năng/an ninh.
+*   **Độ phức tạp của FHE (TenSEAL/CKKS):** Hiểu rõ về tham số, quản lý "noise", đảm bảo độ chính xác (precision) cho CKKS.
+*   **Triển khai Xác thực An toàn:** Đảm bảo cơ chế JWT và quản lý Public Key định danh được triển khai đúng cách và an toàn.
+*   **Truyền Secret Key An toàn:** Việc Bank System gửi HE Secret Key đến HE Service cho mỗi yêu cầu giải mã cần được thực hiện qua kênh mã hóa mạnh (HTTPS) và HE Service không được lưu trữ SK này.
+*   **Hiệu năng:** FHE vốn có chi phí tính toán cao. Việc gọi API qua mạng cho mỗi thao tác mã hóa/giải mã có thể tăng thêm độ trễ.
+*   **Quản lý khóa:** Ngoài HE Secret Key, còn có các khóa dùng cho JWT, Public Key định danh. Việc quản lý vòng đời của tất cả các khóa này trong một hệ thống thực tế là phức tạp.
+*   **Tích hợp SQL Server:** Đảm bảo kết nối và truy vấn dữ liệu từ SQL Server hiệu quả.
 
-## Hướng đi trong tương lai
+## 8️⃣ Hướng đi trong tương lai (Future Directions)
 
-*   **Khám phá các phép toán FHE nâng cao:** Nghiên cứu sâu hơn về cách thực hiện các hàm phức tạp hơn (ví dụ: hàm kích hoạt trong mạng nơ-ron, hàm đa thức) bằng TenSEAL hoặc các thư viện FHE khác như Pyfhel (nếu muốn so sánh).
-*   **Tối ưu hóa hiệu suất:** Nghiên cứu các kỹ thuật như batching (xử lý nhiều giá trị trong một ciphertext), lựa chọn tham số FHE tối ưu, và các thủ tục quản lý "noise" (relinearization, bootstrapping nếu thư viện hỗ trợ và cần thiết).
-*   **Mô hình tính điểm nâng cao:** Áp dụng FHE cho các mô hình Machine Learning đơn giản có thể huấn luyện hoặc dự đoán trên dữ liệu mã hóa (ví dụ: hồi quy tuyến tính, hồi quy logistic).
-*   **Cơ chế quản lý khóa nâng cao:** Nghiên cứu các giải pháp quản lý khóa (Key Management System - KMS) và các kỹ thuật như threshold cryptography để tăng cường an toàn cho khóa bí mật trong môi trường thực tế.
-*   **Đánh giá an ninh toàn diện:** Phân tích các nguy cơ tấn công tiềm ẩn khác và đề xuất biện pháp phòng chống phù hợp với FHE.
+*   **Tối ưu hóa hiệu suất HE Service:** Nghiên cứu các kỹ thuật batching cho yêu cầu mã hóa/giải mã, hoặc sử dụng các giải pháp tăng tốc phần cứng (nếu có).
+*   **Cơ chế quản lý HE Secret Key nâng cao:** Thay vì Bank System gửi SK mỗi lần, có thể nghiên cứu tích hợp HE Service với một Hardware Security Module (HSM) nơi SK của Bank được lưu trữ và HE Service chỉ gọi các hàm của HSM.
+*   **Mô hình tính điểm phức tạp hơn:** Áp dụng cho các mô hình Machine Learning có thể được biểu diễn bằng các phép toán FHE hỗ trợ.
+*   **Mở rộng HE Service:** Hỗ trợ nhiều lược đồ HE khác nhau, hoặc các cấu hình tham số linh hoạt hơn.
+*   **Giám sát và Logging:** Xây dựng hệ thống giám sát hoạt động và ghi log chi tiết cho HE Service và các tương tác.
