@@ -1,118 +1,152 @@
-# Hệ module mã hóa đồng hình nhiều ngân hàng (`he_crypto_module`)
+# Hướng dẫn sử dụng module `he_crypto_module` với OpenFHE
 
 ## 1. Giới thiệu
 
-`he_crypto_module` là một module Python được xây dựng dựa trên thư viện `tenseal` để thực hiện các hoạt động mã hóa đồng cấu đa bên (Multiparty Homomorphic Encryption). Module này cho phép nhiều bên (ví dụ: các ngân hàng) cùng nhau tham gia vào quá trình giải mã một dữ liệu đã được mã hóa mà không cần tiết lộ khóa bí mật riêng của từng bên. Điều này đảm bảo tính riêng tư và an toàn cho dữ liệu nhạy cảm.
+`he_crypto_module` là một module Python sử dụng thư viện `openfhe-python` để triển khai một hệ thống mã hóa đồng cấu đa bên (Multiparty Homomorphic Encryption) hoàn chỉnh. Không giống như các hệ thống mã hóa truyền thống hoặc HE đơn giản, module này cho phép nhiều bên cùng hợp tác để tạo ra một khóa công khai chung và sau đó cùng nhau giải mã dữ liệu mà không cần tiết lộ khóa bí mật riêng của từng bên.
 
-Module được thiết kế để phục vụ cho kịch bản một đối tác (Fintech Partner) thực hiện tính toán trên dữ liệu được mã hóa và kết quả chỉ có thể được giải mã khi có sự hợp tác của tất cả các ngân hàng tham gia.
+Luồng hoạt động này đặc biệt hữu ích trong các kịch bản tài chính, nơi nhiều ngân hàng cần hợp tác với một đối tác (ví dụ: Fintech) để phân tích dữ liệu nhạy cảm mà vẫn đảm bảo tính riêng tư tuyệt đối.
+
+**Các tính năng chính:**
+-   Tạo CryptoContext với lược đồ CKKS.
+-   Luồng tạo khóa đa bên tuần tự (sequential multiparty key generation).
+-   Luồng tạo khóa đánh giá phép nhân đa bên (multiparty evaluation key generation).
+-   Mã hóa dữ liệu bằng khóa công khai chung.
+-   Giải mã theo ngưỡng (Threshold Decryption), yêu cầu sự tham gia của các bên để có được kết quả cuối cùng.
+-   Tất cả các khóa và bản mã được serialize sang định dạng Base64 để dễ dàng lưu trữ và truyền tải.
 
 ---
 
 ## 2. Cài đặt
 
-Để sử dụng module này, bạn cần cài đặt thư viện `tenseal`:
+Module này yêu cầu các thư viện sau:
+-   `openfhe-python`
+-   `numpy`
 
+Bạn có thể cài đặt chúng bằng pip:
 ```sh
-pip install tenseal
+pip install openfhe-python numpy
 ```
 
 ---
 
-## 3. Các chức năng chính
+## 3. Tổng quan về luồng hoạt động
 
-Module cung cấp các hàm để thực hiện toàn bộ luồng mã hóa đồng cấu đa bên.
+Hệ thống hoạt động theo một quy trình nghiêm ngặt gồm nhiều giai đoạn:
 
-### 3.1. `create_tenseal_context()`
-
-Tạo và trả về một đối tượng context của TenSEAL. Context này chứa các tham số mã hóa (lược đồ, bậc đa thức, ...) và phải được sử dụng nhất quán trong suốt quá trình từ tạo khóa, mã hóa đến giải mã.
-
-### 3.2. `generate_multiparty_keys(context, num_parties)`
-
--   **Mục đích**: Sinh khóa cho một kịch bản đa bên.
--   **Đầu vào**:
-    -   `context`: Context TenSEAL đã được tạo.
-    -   `num_parties`: Số lượng bên tham gia (ví dụ: 3 ngân hàng).
--   **Đầu ra**: Một tuple chứa:
-    -   `joint_public_key`: Khóa công khai chung, được sử dụng để mã hóa.
-    -   `secret_key_shares`: Một list chứa các phần khóa bí mật, mỗi phần dành cho một bên.
-
-### 3.3. `encrypt_data(context, public_key, data)`
-
--   **Mục đích**: Mã hóa dữ liệu.
--   **Đầu vào**:
-    -   `context`: Context TenSEAL.
-    -   `public_key`: Khóa công khai (trong kịch bản này là `joint_public_key`).
-    -   `data`: Dữ liệu cần mã hóa (dưới dạng list hoặc vector số).
--   **Đầu ra**: `CKKSTensor` đã được mã hóa (ciphertext).
-
-### 3.4. `partial_decrypt(secret_key_share, encrypted_data)`
-
--   **Mục đích**: Mỗi bên thực hiện giải mã một phần.
--   **Đầu vào**:
-    -   `secret_key_share`: Phần khóa bí mật của một bên.
-    -   `encrypted_data`: Dữ liệu đã được mã hóa.
--   **Đầu ra**: Một phần giải mã (decryption share).
-
-### 3.5. `combine_partial_decrypt(encrypted_data, decryption_shares)`
-
--   **Mục đích**: Tổng hợp các phần giải mã để có được kết quả cuối cùng.
--   **Đầu vào**:
-    -   `encrypted_data`: Dữ liệu mã hóa gốc.
-    -   `decryption_shares`: Một list chứa các phần giải mã từ tất cả các bên.
--   **Đầu ra**: Dữ liệu đã được giải mã hoàn toàn (dưới dạng list số).
-
-### 3.6. Các hàm Serialize/Deserialize
-
-Module cũng cung cấp các hàm để chuyển đổi khóa và ciphertext sang định dạng `base64` (string) để dễ dàng lưu trữ hoặc truyền tải qua mạng.
-
--   `serialize_...`: Chuyển đối tượng (context, key, ciphertext) thành chuỗi base64.
--   `deserialize_...`: Chuyển chuỗi base64 ngược lại thành đối tượng tương ứng.
+1.  **Khởi tạo (Context Creation)**: Một `CryptoContext` được tạo ra với các tham số mã hóa được định sẵn. Context này phải được sử dụng nhất quán trong tất cả các bước tiếp theo.
+2.  **Tạo khóa công khai chung (Joint Public Key Generation)**:
+    a.  **Bên dẫn đầu (Lead Party)**: Bên đầu tiên (ví dụ: Ngân hàng A) gọi hàm `keygen()` để tạo cặp khóa đầu tiên.
+    b.  **Các bên tiếp theo (Subsequent Parties)**: Các bên còn lại (Ngân hàng B, C,...) lần lượt gọi hàm `multiparty_keygen()`, sử dụng khóa công khai của bên ngay trước đó để đóng góp vào khóa chung. Khóa công khai cuối cùng là khóa công khai chung của cả nhóm.
+3.  **Tạo khóa đánh giá phép nhân (EvalMult Key Generation)**: Tương tự như trên, các bên cùng nhau tạo ra một khóa đánh giá chung để cho phép thực hiện phép nhân trên dữ liệu mã hóa.
+4.  **Mã hóa (Encryption)**: Một bên bất kỳ (ví dụ: Fintech Partner) sử dụng khóa công khai chung cuối cùng để mã hóa dữ liệu.
+5.  **Giải mã theo ngưỡng (Threshold Decryption)**:
+    a.  **Bên dẫn đầu (Lead Party)**: Bên dẫn đầu của quá trình giải mã (có thể là bên đã khởi tạo khóa) gọi hàm `partial_decrypt()` với cờ `is_lead=True`.
+    b.  **Các bên còn lại**: Các bên khác gọi `partial_decrypt()` với cờ `is_lead=False`. Mỗi lệnh gọi sẽ tạo ra một "phần giải mã" (decryption share).
+    c.  **Tổng hợp kết quả**: Các phần giải mã được thu thập và đưa vào hàm `combine_partial_decrypt()` để có được kết quả giải mã cuối cùng.
 
 ---
 
-## 4. Luồng hoạt động mẫu
+## 4. Mô tả các hàm
 
-File `test_multiparty.py` cung cấp một ví dụ hoàn chỉnh về cách sử dụng module này.
+#### `create_crypto_context()`
+Tạo và cấu hình các tham số cho mã hóa đồng cấu (lược đồ CKKS, độ sâu phép nhân, kích thước batch, ...).
+
+#### `keygen(cc)`
+Dành cho bên đầu tiên. Tạo ra cặp khóa public/private ban đầu.
+-   **Đầu vào**: `cc` (CryptoContext).
+-   **Đầu ra**: Dictionary chứa `public_key` và `secret_key` dưới dạng Base64.
+
+#### `multiparty_keygen(cc, prev_pub_key_b64)`
+Dành cho các bên tiếp theo. Đóng góp vào khóa công khai chung.
+-   **Đầu vào**: `cc`, `prev_pub_key_b64` (khóa công khai của bên trước đó).
+-   **Đầu ra**: Dictionary chứa khóa công khai *mới* và khóa bí mật của riêng bên này.
+
+#### `encrypt(cc, pubkey_b64, message)`
+Mã hóa một mảng dữ liệu.
+-   **Đầu vào**: `cc`, `pubkey_b64` (khóa công khai chung cuối cùng), `message` (list/numpy array).
+-   **Đầu ra**: Ciphertext dưới dạng Base64.
+
+#### `partial_decrypt(cc, private_key_b64, ciphertext_b64, is_lead)`
+Thực hiện giải mã một phần.
+-   **Đầu vào**: `cc`, `private_key_b64` (khóa bí mật của bên thực hiện), `ciphertext_b64`, `is_lead` (cờ boolean xác định đây có phải bên dẫn đầu không).
+-   **Đầu ra**: Một phần giải mã (decryption share) dưới dạng Base64.
+
+#### `combine_partial_decrypt(cc, part_b64_list)`
+Tổng hợp các phần giải mã.
+-   **Đầu vào**: `cc`, `part_b64_list` (list các phần giải mã từ tất cả các bên).
+-   **Đầu ra**: Dữ liệu đã được giải mã hoàn toàn (numpy array).
+
+---
+
+## 5. Ví dụ: Kịch bản 3 Ngân hàng
 
 ```python
 import he_crypto_module as he
+import numpy as np
 
-# 1. Thiết lập môi trường (chung cho tất cả các bên)
-num_banks = 3
-context = he.create_tenseal_context()
+# --- Giai đoạn 1: Thiết lập và tạo khóa ---
+print("1. Setting up crypto context...")
+cc = he.create_crypto_context()
 
-# 2. Sinh khóa đa bên (do một bên khởi tạo hoặc một bên thứ ba đáng tin cậy)
-joint_pk, sk_shares = he.generate_multiparty_keys(context, num_banks)
+# Ngân hàng A (Lead Party) tạo khóa đầu tiên
+print("2. Bank A generates initial key pair...")
+keys_A = he.keygen(cc)
 
-# Phân phối các phần khóa bí mật cho từng ngân hàng
-bank1_sk = sk_shares[0]
-bank2_sk = sk_shares[1]
-bank3_sk = sk_shares[2]
+# Ngân hàng B tham gia, sử dụng public key của A
+print("3. Bank B joins, using Bank A's public key...")
+keys_B = he.multiparty_keygen(cc, keys_A["public_key"])
 
-# 3. Mã hóa dữ liệu (do Fintech Partner thực hiện)
-message = [10.5, 20.2, -5.7]
-encrypted_message = he.encrypt_data(context, joint_pk, message)
+# Ngân hàng C tham gia, sử dụng public key của B
+print("4. Bank C joins, using Bank B's public key...")
+keys_C = he.multiparty_keygen(cc, keys_B["public_key"])
 
-# 4. Giải mã đa bên
-# a. Mỗi ngân hàng tạo một phần giải mã
-dec_share1 = he.partial_decrypt(bank1_sk, encrypted_message)
-dec_share2 = he.partial_decrypt(bank2_sk, encrypted_message)
-dec_share3 = he.partial_decrypt(bank3_sk, encrypted_message)
+# Khóa công khai của C chính là khóa công khai chung cuối cùng
+joint_public_key = keys_C["public_key"]
+print("   - Joint Public Key generated.")
 
-# b. Tập hợp và kết hợp các phần giải mã
-all_shares = [dec_share1, dec_share2, dec_share3]
-decrypted_message = he.combine_partial_decrypt(encrypted_message, all_shares)
+# --- Giai đoạn 2: Mã hóa ---
+# Fintech Partner mã hóa dữ liệu bằng khóa chung
+print("5. Fintech Partner encrypts data...")
+message = [1.0, 2.5, 3.0, 4.2]
+ciphertext_b64 = he.encrypt(cc, joint_public_key, message)
+print(f"   - Encryption complete.")
 
-# 5. In kết quả
-print("Original Message:", message)
-print("Decrypted Message:", decrypted_message)
+# --- Giai đoạn 3: Giải mã theo ngưỡng ---
+print("6. Threshold decryption process starts...")
+
+# Ngân hàng A (Lead Party) tạo phần giải mã đầu tiên
+print("   - Bank A (lead) creates its partial decryption...")
+part_A = he.partial_decrypt(cc, keys_A["secret_key"], ciphertext_b64, is_lead=True)
+
+# Ngân hàng B và C tạo các phần giải mã của họ
+print("   - Bank B creates its partial decryption...")
+part_B = he.partial_decrypt(cc, keys_B["secret_key"], ciphertext_b64, is_lead=False)
+print("   - Bank C creates its partial decryption...")
+part_C = he.partial_decrypt(cc, keys_C["secret_key"], ciphertext_b64, is_lead=False)
+
+# Tổng hợp tất cả các phần giải mã
+print("7. Fusing all partial decryptions...")
+all_parts = [part_A, part_B, part_C]
+decrypted_message = he.combine_partial_decrypt(cc, all_parts)
+
+# --- Giai đoạn 4: Kiểm tra kết quả ---
+print("\n--- Verification ---")
+print("Original Message:  ", message)
+# So sánh với slice của mảng kết quả vì CKKS có thể trả về nhiều giá trị hơn batch size
+print("Decrypted Message: ", np.round(decrypted_message[:len(message)], 2))
+
+# Kiểm tra tính đúng đắn
+is_correct = np.allclose(message, decrypted_message[:len(message)], atol=0.01)
+print(f"Decryption successful: {is_correct}")
+
 ```
 
 ---
 
-## 5. Lưu ý quan trọng
+## 6. Lưu ý quan trọng
 
--   **Context phải đồng nhất**: Tất cả các bên phải sử dụng cùng một `context` (với cùng tham số) trong suốt quá trình.
--   **Bảo mật khóa bí mật**: Mỗi bên phải giữ an toàn tuyệt đối phần khóa bí mật (`secret_key_share`) của mình.
--   **Đủ số lượng bên tham gia**: Quá trình giải mã chỉ thành công khi có đủ tất cả các phần giải mã từ các bên đã tham gia tạo khóa.
+-   **Thứ tự là tối quan trọng**: Quá trình tạo khóa và giải mã phải tuân thủ đúng thứ tự và vai trò (lead/main party).
+-   **Tính nhất quán của Context**: Cùng một `CryptoContext` phải được sử dụng cho tất cả các hoạt động liên quan đến một nhóm khóa.
+-   **Bảo mật khóa bí mật**: Mỗi bên phải tự bảo vệ khóa bí mật của mình. Việc lộ một khóa bí mật sẽ phá vỡ an toàn của hệ thống.
+-   **Quản lý khóa**: Trong môi trường thực tế, cần có một cơ chế an toàn để trao đổi các khóa công khai và các phần giải mã giữa các bên.
 
