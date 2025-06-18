@@ -82,62 +82,100 @@ Tổng hợp các phần giải mã.
 
 ```python
 import he_crypto_module as he
-import numpy as np
+import base64
 
-# --- Giai đoạn 1: Thiết lập và tạo khóa ---
-print("1. Setting up crypto context...")
-cc = he.create_crypto_context()
+def test_multiparty_encryption():
+    """
+    A simple test case to demonstrate the multiparty key generation and
+    encryption process for a 3-party system (e.g., three banks).
+    """
+    print("--- 1. Setting up CryptoContext ---")
+    # All parties must use the same crypto context
+    cc = he.create_crypto_context()
+    print("CryptoContext created successfully.\n")
 
-# Ngân hàng A (Lead Party) tạo khóa đầu tiên
-print("2. Bank A generates initial key pair...")
-keys_A = he.keygen(cc)
+    # --- Stage 1: Bank 1 (Lead) generates the first key pair ---
+    print("--- 2. Bank 1 (Lead) generating initial key pair ---")
+    bank1_keys = he.keygen(cc)
+    with open("bank1_sk.txt", "w") as f:
+        f.write(bank1_keys["secret_key"])
+    print("Bank 1 Public Key (b64):", bank1_keys["public_key"][:30] + "...")
+    print("Bank 1 Secret Key saved to bank1_sk.txt")
+    print("Bank 1 finished.\n")
 
-# Ngân hàng B tham gia, sử dụng public key của A
-print("3. Bank B joins, using Bank A's public key...")
-keys_B = he.multiparty_keygen(cc, keys_A["public_key"])
+    # --- Stage 2: Bank 2 joins and contributes to the public key ---
+    print("--- 3. Bank 2 contributing to the public key ---")
+    bank2_keys = he.multiparty_keygen(cc, bank1_keys["public_key"])
+    with open("bank2_sk.txt", "w") as f:
+        f.write(bank2_keys["secret_key"])
+    print("Bank 2 (Joint) Public Key (b64):", bank2_keys["public_key"][:30] + "...")
+    print("Bank 2 Secret Key saved to bank2_sk.txt")
+    print("Bank 2 finished.\n")
 
-# Ngân hàng C tham gia, sử dụng public key của B
-print("4. Bank C joins, using Bank B's public key...")
-keys_C = he.multiparty_keygen(cc, keys_B["public_key"])
+    # --- Stage 3: Bank 3 joins and contributes, creating the final public key ---
+    print("--- 4. Bank 3 contributing to the final public key ---")
+    bank3_keys = he.multiparty_keygen(cc, bank2_keys["public_key"])
+    final_public_key = bank3_keys["public_key"]
+    with open("bank3_sk.txt", "w") as f:
+        f.write(bank3_keys["secret_key"])
+    with open("joint_pk.txt", "w") as f:
+        f.write(final_public_key)
+    print("Bank 3 (Final Joint) Public Key saved to joint_pk.txt")
+    print("Bank 3 Secret Key saved to bank3_sk.txt")
+    print("Multiparty key generation complete.\n")
 
-# Khóa công khai của C chính là khóa công khai chung cuối cùng
-joint_public_key = keys_C["public_key"]
-print("   - Joint Public Key generated.")
+    # --- Stage 4: Encrypting data with the final joint public key ---
+    print("--- 5. Encrypting data with the final joint public key ---")
+    # Sample financial data to be encrypted
+    message_to_encrypt = [1200.5]
+    print("Original Message:", message_to_encrypt)
 
-# --- Giai đoạn 2: Mã hóa ---
-# Fintech Partner mã hóa dữ liệu bằng khóa chung
-print("5. Fintech Partner encrypts data...")
-message = [1.0, 2.5, 3.0, 4.2]
-ciphertext_b64 = he.encrypt(cc, joint_public_key, message)
-print(f"   - Encryption complete.")
+    ciphertext_b64 = he.encrypt(cc, final_public_key, message_to_encrypt)
+    with open("ciphertext.txt", "w") as f:
+        f.write(ciphertext_b64)
+    print("Encryption successful!")
+    print("Final Ciphertext saved to ciphertext.txt")
 
-# --- Giai đoạn 3: Giải mã theo ngưỡng ---
-print("6. Threshold decryption process starts...")
+    # --- Stage 5: Multiparty Decryption ---
+    print("\n--- 6. Performing multiparty decryption ---")
 
-# Ngân hàng A (Lead Party) tạo phần giải mã đầu tiên
-print("   - Bank A (lead) creates its partial decryption...")
-part_A = he.partial_decrypt(cc, keys_A["secret_key"], ciphertext_b64, is_lead=True)
+    # Each party generates a partial decryption share
+    # Bank 1 (Lead)
+    partial_decryption1 = he.partial_decrypt(cc, bank1_keys["secret_key"], ciphertext_b64, is_lead=True)
+    print("Bank 1 created partial decryption share.")
 
-# Ngân hàng B và C tạo các phần giải mã của họ
-print("   - Bank B creates its partial decryption...")
-part_B = he.partial_decrypt(cc, keys_B["secret_key"], ciphertext_b64, is_lead=False)
-print("   - Bank C creates its partial decryption...")
-part_C = he.partial_decrypt(cc, keys_C["secret_key"], ciphertext_b64, is_lead=False)
+    # Bank 2
+    partial_decryption2 = he.partial_decrypt(cc, bank2_keys["secret_key"], ciphertext_b64, is_lead=False)
+    print("Bank 2 created partial decryption share.")
 
-# Tổng hợp tất cả các phần giải mã
-print("7. Fusing all partial decryptions...")
-all_parts = [part_A, part_B, part_C]
-decrypted_message = he.combine_partial_decrypt(cc, all_parts)
+    # Bank 3
+    partial_decryption3 = he.partial_decrypt(cc, bank3_keys["secret_key"], ciphertext_b64, is_lead=False)
+    print("Bank 3 created partial decryption share.")
 
-# --- Giai đoạn 4: Kiểm tra kết quả ---
-print("\n--- Verification ---")
-print("Original Message:  ", message)
-# So sánh với slice của mảng kết quả vì CKKS có thể trả về nhiều giá trị hơn batch size
-print("Decrypted Message: ", np.round(decrypted_message[:len(message)], 2))
+    # --- Stage 6: Combine partial decryptions ---
+    print("\n--- 7. Combining partial decryptions to recover data ---")
+    decryption_shares = [partial_decryption1, partial_decryption2, partial_decryption3]
+    
+    decrypted_message = he.combine_partial_decrypt(cc, decryption_shares)
+    print("Decryption successful!")
+    print("Decrypted Message:", decrypted_message)
 
-# Kiểm tra tính đúng đắn
-is_correct = np.allclose(message, decrypted_message[:len(message)], atol=0.01)
-print(f"Decryption successful: {is_correct}")
+    # --- Verification ---
+    print("\n--- 8. Verifying the result ---")
+    # Using numpy to compare floating point numbers with a tolerance
+    import numpy as np
+    print(message_to_encrypt)
+    is_correct = np.allclose(message_to_encrypt, decrypted_message, atol=0.0001)
+    
+    if is_correct:
+        print("SUCCESS: Decrypted data matches the original message.")
+    else:
+        print("FAILURE: Decrypted data does not match the original message.")
+
+
+if __name__ == "__main__":
+    test_multiparty_encryption()
+
 
 ```
 
