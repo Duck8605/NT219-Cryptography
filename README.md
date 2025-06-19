@@ -48,7 +48,7 @@ Hệ thống của chúng tôi áp dụng mô hình "tính toán tập trung, ti
 | :--- | :--- | :--- |
 | **Mã hóa Đồng hình** | **OpenFHE (CKKS Scheme)** | Cung cấp nền tảng mã hóa đồng hình ngưỡng, cho phép tính toán trên số thực. |
 | **Backend & API** | Python, FastAPI | Xây dựng API mạnh mẽ, hiệu năng cao để xử lý các yêu cầu từ ngân hàng. |
-| **Database** | PostgreSQL / MongoDB | Lưu trữ an toàn và hiệu quả dữ liệu mã hóa có cấu trúc lớn. |
+| **Database** | SQL Server | Lưu trữ an toàn và hiệu quả dữ liệu mã hóa có cấu trúc lớn. |
 | **Giao tiếp mạng** | **TLS 1.3** | Đảm bảo tính bí mật và toàn vẹn cho tất cả các kênh truyền dữ liệu. |
 | **Xác thực** | **OAuth 2.0** | Kiểm soát và xác thực truy cập API từ các ngân hàng. |
 | **Bảo mật Khóa** | **HSM (Hardware Security Module)** | Nơi các ngân hàng lưu trữ an toàn các phần khóa bí mật của mình. |
