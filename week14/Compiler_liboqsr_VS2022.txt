@@ -1,0 +1,24 @@
+﻿0. Prerequisite
+See: https://github.com/open-quantum-safe/liboqs/wiki/Platform-specific-notes-for-building-liboqs#cross-compiling
+
+1. CMake projects in Visual Studio
+Tools -> Get Tools and Features -> Individual Components
+	C++ Cmake tools for Window
+	C++/CLI support for v.. build tools
+2. Open liboqs folder
+
+3. Cmake setings
+Edit the file Cmakesetings.json to your output target
+
+4.  Buil with cmake
+4.1 Set cmake path
+set PATH=C:\Program Files\Microsoft Visual Studio\2022\Professional\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin;%PATH%
+4.2 check
+where cmake
+#---> The output must include CMake\CMake\bin\cmake.exe
+
+4.3 Compile and install liboqs
+cmake -DCMAKE_INSTALL_PREFIX=D:\Labs_Crypto\oqs
+cmake -B build -S . -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Debug --fresh
+cmake --build build --parallel --config Debug
+cmake --install build --prefix D:\Labs_Crypto\oqs

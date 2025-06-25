@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup OTP - Secure Network App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .btn {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            text-decoration: none;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .btn:hover {
+            background: #45a049;
+        }
+        .qr-container {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .secret-key {
+            font-family: monospace;
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 15px 0;
+            word-break: break-all;
+        }
+        .instructions {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Setup Two-Factor Authentication</h1>
+    
+    <div class="instructions">
+        <h2>Instructions:</h2>
+        <ol>
+            <li>Install an authenticator app on your mobile device (Google Authenticator, Authy, etc.)</li>
+            <li>Scan the QR code below with your authenticator app</li>
+            <li>Alternatively, you can manually enter the secret key into your app</li>
+            <li>Enter the 6-digit code from your authenticator app to verify setup</li>
+        </ol>
+    </div>
+    
+    <div class="qr-container">
+        <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code for OTP Setup">
+    </div>
+    
+    <p>If you cannot scan the QR code, manually enter this secret key in your authenticator app:</p>
+    <div class="secret-key">{{ secret_key }}</div>
+    
+    <form method="post" action="{% url 'verify_otp' %}">
+        {% csrf_token %}
+        <p>Enter the 6-digit code from your authenticator app:</p>
+        <input type="text" name="otp_token" pattern="[0-9]{6}" maxlength="6" required>
+        <button type="submit" class="btn">Verify and Enable</button>
+    </form>
+    
+    <p><a href="{% url 'dashboard' %}">Cancel and return to Dashboard</a></p>
+</body>
+</html>

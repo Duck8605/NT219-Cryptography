@@ -1,0 +1,3 @@
+D:\Pythons\Python312-uit\python.exe -m pip install pyOpenSSL dnspython
+
+D:\Pythons\Python312-uit\python.exe dnscheck.py --host dns.google --name uit.edu.vn

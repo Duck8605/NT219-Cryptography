@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - Secure Network App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .btn {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .btn:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>Secure Network Application</h1>
+    <p>Welcome to our secure network application with advanced cryptographic authentication.</p>
+    <p>This application demonstrates secure authentication using both password and One-Time Password (OTP).</p>
+    
+    <h2>Features:</h2>
+    <ul>
+        <li>Secure password authentication</li>
+        <li>Two-factor authentication with TOTP (Time-based One-Time Password)</li>
+        <li>QR code generation for easy OTP setup</li>
+    </ul>
+    
+    <a href="{% url 'login' %}" class="btn">Login</a>
+</body>
+</html>
